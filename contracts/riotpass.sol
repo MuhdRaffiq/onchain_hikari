@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@thirdweb-dev/contracts/base/ERC721Base.sol";
-//import "@openzeppelin/contracts/utils/Base64.sol";
-//import "@opengsn/contracts/src/ERC2771Recipient.sol";
-//import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {ERC721Base} from "@thirdweb-dev/contracts/base/ERC721Base.sol";
+import {Context} from "@thirdweb-dev/contracts/openzeppelin-presets/utils/Context.sol";
+import {ERC2771Context} from "@thirdweb-dev/contracts/openzeppelin-presets/metatx/ERC2771Context.sol";
 
 /*************************************************************
  __ __  ____  __  _   ____  ____   ____      ____   ____  ___      ___  ____    _____     ____   ____  ___   ______ 
@@ -29,14 +27,14 @@ contract RiotPass is  ERC2771Context, ERC721Base {
         string memory _symbol,
         address _royaltyRecipient,
         uint128 _royaltyBps,
-        address _trustedForwarder
+        address[] memory _trustedForwarder
     )
         ERC721Base(
             _name,
             _symbol,
             _royaltyRecipient,
             _royaltyBps
-        )ERC2771Context(address(_trustedForwarder))
+        )ERC2771Context(_trustedForwarder)
     {
         //trustedForwarder = _trustedForwarder;
         //_setTrustedForwarder(forwarder_);
@@ -80,9 +78,9 @@ contract RiotPass is  ERC2771Context, ERC721Base {
     */
     function claim(uint256 _amount) public {
         //require(_amount > 0 && _amount < 6);
-        _safeMint(msg.sender, _amount);
+        _safeMint(_msgSender(), _amount);
 
-        emit claimed(msg.sender, _amount);
+        //emit claimed(, _amount);
     }
 
 }
