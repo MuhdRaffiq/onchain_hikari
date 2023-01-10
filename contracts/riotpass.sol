@@ -18,16 +18,15 @@ import {ERC2771Context} from "@thirdweb-dev/contracts/openzeppelin-presets/metat
 
 contract RiotPass is  ERC2771Context, ERC721Base {
 
-    //address public trustedForwarder;
-
+    address[] public _trustedForwarder;
     address public metadataContract;
 
       constructor(
         string memory _name,
         string memory _symbol,
         address _royaltyRecipient,
-        uint128 _royaltyBps,
-        address[] memory _trustedForwarder
+        uint128 _royaltyBps
+        //address[] memory _trustedForwarder
     )
         ERC721Base(
             _name,
@@ -35,12 +34,10 @@ contract RiotPass is  ERC2771Context, ERC721Base {
             _royaltyRecipient,
             _royaltyBps
         )ERC2771Context(_trustedForwarder)
-    {
-        //trustedForwarder = _trustedForwarder;
-        //_setTrustedForwarder(forwarder_);
-    }
+    {}
     
-    //string public versionRecipient = "2.2.0";
+    event claimed(address claimant, uint256 amount);
+    event newForwarder(address[] trustedForwarder);
 
   function _msgSender() internal view override(Context, ERC2771Context)
       returns (address sender) {
@@ -52,10 +49,10 @@ contract RiotPass is  ERC2771Context, ERC721Base {
       return ERC2771Context._msgData();
   }
 
-    event claimed(address claimant, uint256 amount);
+    function setTrustedForwarder(address[] memory _newtrustedForwarder) external onlyOwner {
+        _trustedForwarder = _newtrustedForwarder;
 
-    function setTrustedForwarder(address _trustedForwarder) external onlyOwner {
-
+        emit newForwarder(_trustedForwarder);
     }
 
     /**
@@ -77,10 +74,8 @@ contract RiotPass is  ERC2771Context, ERC721Base {
     * @dev we set claim for our users to get NFT
     */
     function claim(uint256 _amount) public {
-        //require(_amount > 0 && _amount < 6);
         _safeMint(_msgSender(), _amount);
-
-        //emit claimed(, _amount);
+        emit claimed(msg.sender, _amount);
     }
 
 }
