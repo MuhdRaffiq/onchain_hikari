@@ -1,0 +1,12 @@
+{
+    "name": "Hikari Riot Pass #0", 
+    "description": "Hikari Riot Pass is a membership pass by Hikari Riders backed by NFT technology.\nThis pass will grant the holder access to perks within the Hikari Riders ecosystem.", 
+    "image": "ar://PPhGPCcE445tddFMZYzXNIU_Rl-wbz0Gc_PZ76waNuY", 
+    "animation_url": "ar://BfJC-XcqUalYqEkQcOh0cSD6DCNKXu9qBmYktPQUpU8", 
+    "attributes": [
+        {"trait_type":"ID","value":"0"},
+        {"trait_type":"Supply","value":2500},
+        {"trait_type":"Type","value":"Pass"},
+        {"trait_type":"Point","value":0}
+    ]
+}

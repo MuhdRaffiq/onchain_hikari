@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
-import {ERC721Base} from "@thirdweb-dev/contracts/base/ERC721Base.sol";
-import {Context} from "@thirdweb-dev/contracts/openzeppelin-presets/utils/Context.sol";
-import {ERC2771Context} from "@thirdweb-dev/contracts/openzeppelin-presets/metatx/ERC2771Context.sol";
-
-// Note     : Riot Pass
+// Note     : On-chain metadata for Riot Pass
 // Dev      : 3L33T
 
 /*************************************************************
@@ -48,136 +44,150 @@ import {ERC2771Context} from "@thirdweb-dev/contracts/openzeppelin-presets/metat
                                                                                                                     
 *************************************************************/
 
-error NoTokensLeft();
-error NoQuantitiesAndRecipients();
-error NonExistentTokenURI();
-error claimNotStarted();
-error ForwarderMsg();
+import "@openzeppelin/contracts/utils/Base64.sol";
 
-contract RiotPass is ERC2771Context, ERC721Base {
-    address[] public _trustedForwarder;
-    address public metadataContract;
+error NotOwner();
+error NoQuantitiesAndPoints();
 
-    uint256 public maxSupply = 2500;
-    bool public claimStatus = false;
+contract RiotMetadata {
+    string public desc =
+        "Hikari Riot Pass is a membership pass by Hikari Riders backed by NFT technology.\\nThis pass will grant the holder access to perks within the Hikari Riders ecosystem.";
+    string public animURL = "ar://BfJC-XcqUalYqEkQcOh0cSD6DCNKXu9qBmYktPQUpU8";
+    string public image = "ar://PPhGPCcE445tddFMZYzXNIU_Rl-wbz0Gc_PZ76waNuY";
+    address public owner;
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _royaltyRecipient,
-        uint128 _royaltyBps
-    )
-        //address[] memory _trustedForwarder
-        ERC721Base(_name, _symbol, _royaltyRecipient, _royaltyBps)
-        ERC2771Context(_trustedForwarder)
-    {}
+    mapping(uint256 => uint256) public points;
 
-    event claimed(address indexed claimant, uint256 amount);
-    event newForwarder(address[] trustedForwarder);
-    event newMetadataAddress(address metadataContract);
-    event airdropped(address[] addr, uint256[] qty);
-
-    /**
-    * @dev function to set the claim process to be open for users. 
-     */
-    function setClaimProcessStatus(bool newStatus) external onlyOwner {
-        claimStatus = newStatus;
+    constructor() {
+        owner = msg.sender;
     }
 
-    function _msgSender()
-        internal
-        view
-        override(Context, ERC2771Context)
-        returns (address sender)
-    {
-        sender = ERC2771Context._msgSender();
+    event newDesc(string desc);
+    event newAnimURL(string animURL);
+    event newImage(string image);
+    event pointsUpdated(uint256 indexed id, uint256 points);
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner();
+        _;
     }
 
-    function _msgData()
-        internal
-        view
-        override(Context, ERC2771Context)
-        returns (bytes calldata)
-    {
-        return ERC2771Context._msgData();
+    function setDescription(string calldata _desc) external onlyOwner {
+        desc = _desc;
+        emit newDesc(desc);
     }
 
-    /**
-    * @dev this is where we set our gas fee fund address to fund the claim function
-     */
-    function setTrustedForwarder(address[] memory _newtrustedForwarder)
-        external
-        onlyOwner
-    {
-        _trustedForwarder = _newtrustedForwarder;
-
-        emit newForwarder(_trustedForwarder);
+    function setAnimationURL(string calldata _animURL) external onlyOwner {
+        animURL = _animURL;
+        emit newAnimURL(animURL);
     }
 
-    /**
-     * @dev override the tokenURI function
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        virtual
-        override
-        returns (string memory)
-    {
-        if (ownerOf(tokenId) == address(0)) revert NonExistentTokenURI();
-        return IRiotMetadata(metadataContract).fetchMetadata(tokenId);
+    function setImageURL(string calldata _image) external onlyOwner {
+        image = _image;
+        emit newImage(image);
     }
 
-    /**
-     * @dev set metadata address
-     */
-    function setMetadataAddress(address _address) external onlyOwner {
-        metadataContract = _address;
-        emit newMetadataAddress(metadataContract);
+    function updatePoints(uint256 _id, uint256 _points) external onlyOwner {
+        points[_id] = _points;
+        emit pointsUpdated(_id, _points);
     }
 
-    /**
-     * @dev we set claim for our users to get NFT, Here we use _msgSender() to help trustedForwarder to fund the gas fee for our users
-     */
-    function claim(uint256 _amount) public {
-        if (claimStatus == false) revert claimNotStarted();
-        if (msg.sender != _trustedForwarder[0]) revert ForwarderMsg();
+    function updatePointsBatch(
+        uint256[] calldata _ids,
+        uint256[] calldata _points
+    ) external onlyOwner {
+        uint256 idl = _ids.length;
+        uint256 ptl = _points.length;
 
-        _safeMint(_msgSender(), _amount);
-    }
+        if (ptl != idl) revert NoQuantitiesAndPoints();
 
-    /**
-    * @dev this function is made to airdrop NFTs in bulk to different addresses. The input will be in ["0x.."] for addresses and [1,4,...] for quantity
-     */
-    function airdrop(uint256[] calldata _qty, address[] calldata _addr)
-        external
-        onlyOwner
-    {
-        uint256 s = totalSupply();
-        uint256 d = _addr.length;
-        uint256 q = _qty.length;
-        uint256 ms = maxSupply;
-
-        if (q != d) revert NoQuantitiesAndRecipients();
-        
-        for (uint256 i = 0; i < d; ) {
-            if (s + _qty[i] > ms) revert NoTokensLeft();
-
-            _safeMint(_addr[i], _qty[i]);
+        for (uint256 i = 0; i < idl; ) {
+            points[_ids[i]] = _points[i];
             unchecked {
                 ++i;
             }
         }
-
-        delete s;
-        delete d;
-        delete q;
+        delete ptl;
+        delete idl;
     }
-}
 
-interface IRiotMetadata {
-    function fetchMetadata(uint256 tokenId)
+    function fetchMetadata(uint256 _tokenID)
         external
         view
-        returns (string memory);
+        returns (string memory)
+    {
+        string memory _name = "Hikari Riot Pass #";
+        string memory _desc = desc;
+        string memory _image = image;
+        string memory _animURL = animURL;
+
+        string[7] memory attr;
+
+        attr[0] = '{"trait_type":"ID","value":"';
+        attr[1] = toString(_tokenID);
+        attr[2] = '"},{"trait_type":"Supply","value":2500},';
+        attr[3] = '{"trait_type":"Type","value":"Pass"},';
+        attr[4] = '{"trait_type":"Point","value":';
+        attr[5] = toString(points[_tokenID]);
+        attr[6] = "}";
+
+        string memory _attr = string(
+            abi.encodePacked(
+                attr[0],
+                attr[1],
+                attr[2],
+                attr[3],
+                attr[4],
+                attr[5],
+                attr[6]
+            )
+        );
+
+        string memory json = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name": "',
+                        _name,
+                        toString(_tokenID),
+                        '", "description": "',
+                        _desc,
+                        '", "image": "',
+                        _image,
+                        '", "animation_url": "',
+                        _animURL,
+                        '", "attributes": [',
+                        _attr,
+                        "]",
+                        "}"
+                    )
+                )
+            )
+        );
+        string memory output = string(
+            abi.encodePacked("data:application/json;base64,", json)
+        );
+        return output;
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        // Inspired by OraclizeAPI's implementation - MIT license
+        // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
+    }
 }
