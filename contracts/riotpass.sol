@@ -53,6 +53,7 @@ error NoQuantitiesAndRecipients();
 error NonExistentTokenURI();
 error claimNotStarted();
 error ForwarderMsg();
+error OverSupply();
 
 contract RiotPass is ERC2771Context, ERC721Base {
     address[] public _trustedForwarder;
@@ -172,6 +173,13 @@ contract RiotPass is ERC2771Context, ERC721Base {
         delete s;
         delete d;
         delete q;
+    }
+
+    /**
+    * @dev this function has been made to block holders from burning the NFT
+     */
+    function burn(uint256 _tokenId) public override onlyOwner {
+        _burn(_tokenId, true);
     }
 }
 
